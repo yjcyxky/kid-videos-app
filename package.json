@@ -1,0 +1,26 @@
+{
+  "name": "kid-videos-app",
+  "version": "1.0.0",
+  "description": "儿童视频智能筛选器 - 跨平台桌面应用",
+  "main": "index.js",
+  "scripts": {
+    "dev:frontend": "cd frontend && npm run dev",
+    "build:frontend": "cd frontend && npm run build",
+    "test:frontend": "cd frontend && npm run test",
+    "test:backend": "cd src-tauri && cargo test",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build",
+    "dev": "npm run tauri:dev",
+    "build": "npm run tauri:build",
+    "setup": "npm install && cd frontend && npm install",
+    "clean": "rm -rf target frontend/dist frontend/node_modules node_modules",
+    "lint:frontend": "cd frontend && npm run lint",
+    "lint:backend": "cd src-tauri && cargo clippy"
+  },
+  "keywords": ["tauri", "react", "typescript", "kids", "videos", "ai"],
+  "author": "Kid Videos Team",
+  "license": "MIT",
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0"
+  }
+}
