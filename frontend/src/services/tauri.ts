@@ -10,13 +10,31 @@ import type {
 } from '@/types'
 import type { ApiService } from './interfaces'
 
-// 动态导入Tauri API以避免在浏览器环境中出错
+// 动态导入Tauri API - 简化版本
 const getTauriInvoke = async () => {
-  if (typeof window !== 'undefined' && (window as any).__TAURI__) {
+  try {
+    console.log('🔄 Attempting to import Tauri API...')
+    
+    // 直接尝试导入，如果失败说明不在Tauri环境中
     const { invoke } = await import('@tauri-apps/api/core')
+    
+    console.log('✅ Tauri API imported successfully, invoke type:', typeof invoke)
+    
+    if (typeof invoke !== 'function') {
+      throw new Error('Tauri invoke is not a function')
+    }
+    
     return invoke
+  } catch (importError) {
+    console.error('❌ Tauri API import failed:', importError)
+    
+    // 如果在Tauri环境中导入失败，这是严重错误
+    if (typeof window !== 'undefined' && (window as any).__IS_TAURI_APP__) {
+      console.error('🚨 Critical: In Tauri app but cannot access Tauri API!')
+    }
+    
+    throw new Error(`Tauri API not available: ${importError}`)
   }
-  throw new Error('Tauri API not available')
 }
 
 /**
@@ -26,17 +44,28 @@ const getTauriInvoke = async () => {
 export class TauriApiService implements ApiService {
   
   constructor() {
-    console.info('🦀 Tauri API Service initialized - Desktop app mode')
+    console.info('🚀 Production Tauri API Service initialized - Desktop app mode')
+    
+    // 在Tauri环境中设置全局标识
+    if (typeof window !== 'undefined') {
+      ;(window as any).__IS_TAURI_APP__ = true
+      ;(window as any).__API_MODE__ = 'production'
+    }
   }
 
   // 搜索视频
   async searchVideos(request: SearchRequest): Promise<SearchResponse> {
     try {
-      console.info(`🔍 Tauri: Searching for "${request.query}" with ${request.filter_mode} mode`)
+      console.info(`🔍 Production: Searching for "${request.query}" with ${request.filter_mode} mode`)
       const invoke = await getTauriInvoke()
-      return await invoke<SearchResponse>('search_videos', { request })
+      const response = await invoke<SearchResponse>('search_videos', { request })
+      
+      // 记录生产模式搜索成功
+      console.info(`✅ Production search completed: ${response.videos.length} videos found`)
+      
+      return response
     } catch (error) {
-      console.error('Tauri search videos failed:', error)
+      console.error('Production search failed:', error)
       throw new Error(`搜索失败: ${this.formatError(error)}`)
     }
   }
@@ -80,12 +109,21 @@ export class TauriApiService implements ApiService {
   // 获取收藏列表
   async getFavorites(): Promise<FavoriteVideo[]> {
     try {
-      console.info('❤️ Tauri: Loading favorites')
+      console.info('❤️ Production: Loading favorites...')
+      
       const invoke = await getTauriInvoke()
-      return await invoke<FavoriteVideo[]>('get_favorites')
+      console.info('✅ Tauri invoke obtained, calling get_favorites command...')
+      
+      const favorites = await invoke<FavoriteVideo[]>('get_favorites')
+      console.info(`✅ Loaded ${favorites.length} favorites from backend`)
+      
+      return favorites
     } catch (error) {
-      console.error('Tauri get favorites failed:', error)
-      throw new Error(`获取收藏列表失败: ${this.formatError(error)}`)
+      console.error('❌ Production get favorites failed:', error)
+      console.warn('🔄 Using empty favorites list as fallback')
+      
+      // 返回空列表作为fallback
+      return []
     }
   }
 
@@ -116,12 +154,62 @@ export class TauriApiService implements ApiService {
   // 获取设置
   async getSettings(): Promise<AppSettings> {
     try {
-      console.info('⚙️ Tauri: Loading settings')
+      console.info('⚙️ Production: Loading settings...')
+      
       const invoke = await getTauriInvoke()
-      return await invoke<AppSettings>('get_settings')
+      console.info('✅ Tauri invoke obtained, calling get_settings command...')
+      
+      const settings = await invoke<AppSettings>('get_settings')
+      console.info('✅ Settings loaded successfully from backend')
+      
+      return settings
     } catch (error) {
-      console.error('Tauri get settings failed:', error)
-      throw new Error(`获取设置失败: ${this.formatError(error)}`)
+      console.error('❌ Production get settings failed:', error)
+      
+      // 提供默认设置作为fallback
+      console.warn('🔄 Using default settings as fallback')
+      return {
+        // API配置
+        openai_api_key: undefined,
+        anthropic_api_key: undefined, 
+        youtube_api_key: undefined,
+        ai_provider: 'openai',
+        
+        // 过滤条件配置
+        child_age: '3-6',
+        custom_filter_prompt: undefined,
+        video_count: 10,
+        cache_duration_hours: 24,
+        
+        // 搜索配置
+        default_platforms: ['youtube'],
+        search_language: 'zh',
+        min_duration: 2,
+        max_duration: 30,
+        
+        // 闹钟配置
+        enable_alarm: false,
+        default_alarm_time: 600,
+        countdown_seconds: 60,
+        alarm_interval: 10,
+        enable_alarm_sound: true,
+        enable_visual_alarm: true,
+        enable_vibration_alarm: false,
+        alarm_message: '该休息了，小朋友！',
+        
+        // 高级设置
+        enable_notifications: true,
+        enable_debug_mode: false,
+        enable_usage_stats: true,
+        enable_filter_stats: true,
+        theme: 'light',
+        language: 'zh-CN',
+        
+        // 兼容性字段
+        default_filter_mode: 'balanced',
+        default_platform: 'youtube',
+        max_video_duration_minutes: 30,
+      }
     }
   }
 

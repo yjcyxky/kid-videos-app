@@ -80,6 +80,14 @@
       </div>
     </div>
     
+    <script>
+      // 在Tauri环境中强制设置生产模式标识
+      if (window.__TAURI__ || window.__TAURI_INVOKE__) {
+        window.__IS_TAURI_APP__ = true;
+        window.__API_MODE__ = 'production';
+        console.log('🚀 Tauri environment detected - Setting production mode');
+      }
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

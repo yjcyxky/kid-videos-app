@@ -20,7 +20,7 @@ export class MockApiService implements ApiService {
   private searchHistory: Record<string, string>[] = []
   
   constructor() {
-    console.info('🎭 Mock API Service initialized - Frontend development mode')
+    console.info('🌐 Browser API Service initialized - Frontend preview mode')
   }
 
   // 搜索视频
@@ -70,7 +70,7 @@ export class MockApiService implements ApiService {
   async saveVideo(video: Video): Promise<string> {
     console.info(`💾 Mock: Saving video "${video.title}"`)
     await this.delay(200)
-    return `Mock: Video ${video.id} saved successfully`
+    return `Video ${video.id} saved successfully`
   }
 
   // 获取收藏列表
@@ -94,7 +94,7 @@ export class MockApiService implements ApiService {
     }
     
     this.favorites.push(newFavorite)
-    return 'Mock: Added to favorites successfully'
+    return 'Added to favorites successfully'
   }
 
   // 从收藏移除
@@ -103,7 +103,7 @@ export class MockApiService implements ApiService {
     await this.delay(300)
     
     this.favorites = this.favorites.filter(fav => fav.id !== favoriteId)
-    return 'Mock: Removed from favorites successfully'
+    return 'Removed from favorites successfully'
   }
 
   // 获取设置
@@ -119,14 +119,14 @@ export class MockApiService implements ApiService {
     await this.delay(500)
     
     this.settings = { ...settings }
-    return 'Mock: Settings saved successfully'
+    return 'Settings saved successfully'
   }
 
   // 清除缓存
   async clearCache(): Promise<string> {
     console.info('🧹 Mock: Clearing cache')
     await this.delay(300)
-    return 'Mock: Cache cleared successfully'
+    return 'Cache cleared successfully'
   }
 
   // 获取搜索历史
@@ -150,19 +150,51 @@ export class MockApiService implements ApiService {
     await this.delay(300)
     
     // 从模拟的搜索结果中移除（实际应用中会从数据库删除）
-    return 'Video deleted successfully (Mock mode)'
+    return 'Video deleted successfully (Preview mode)'
   }
 
   private getDefaultSettings(): AppSettings {
     return {
+      // API配置
+      openai_api_key: undefined,
+      anthropic_api_key: undefined,
+      youtube_api_key: undefined,
+      ai_provider: 'openai',
+      
+      // 过滤条件配置
+      child_age: '3-6',
+      custom_filter_prompt: '请分析视频是否适合3-6岁儿童观看。评判标准：1.教育价值：有助于学习认知、语言、数学、科学等 2.内容安全：无暴力、恐怖、不当内容 3.年龄适宜：符合学前儿童认知水平 4.时长合适：建议2-20分钟 5.制作质量：画面清晰、音频清楚、制作精良。对每个视频给出0-100的评分，只返回评分高于70分的视频。',
+      video_count: 10,
+      cache_duration_hours: -1, // 默认无限缓存
+      
+      // 搜索配置
+      default_platforms: ['youtube', 'youtube_kids'],
+      search_language: 'zh',
+      min_duration: 2,
+      max_duration: 30,
+      
+      // 闹钟配置
+      enable_alarm: false,
+      default_alarm_time: 600, // 10分钟
+      countdown_seconds: 60,
+      alarm_interval: 10,
+      enable_alarm_sound: true,
+      enable_visual_alarm: true,
+      enable_vibration_alarm: false,
+      alarm_message: '该休息了，小朋友！',
+      
+      // 高级设置
+      enable_notifications: true,
+      enable_debug_mode: false,
+      enable_usage_stats: true,
+      enable_filter_stats: true,
+      theme: 'light',
+      language: 'zh-CN',
+      
+      // 兼容性字段
       default_filter_mode: 'balanced',
       default_platform: 'youtube',
-      cache_duration_hours: -1, // 默认无限缓存
-      max_video_duration_minutes: 20,
-      ai_provider: 'openai',
-      custom_filter_prompt: '',
-      language: 'zh-CN',
-      theme: 'light'
+      max_video_duration_minutes: 30,
     }
   }
 
@@ -332,7 +364,7 @@ export class MockApiService implements ApiService {
     }
     
     const baseReason = reasons.length > 0 ? reasons.join('，') : '内容质量一般'
-    return `${baseReason}。（Mock模式模拟分析）`
+    return `${baseReason}。（演示模式分析）`
   }
 
   private getRecommendedAge(scores: any): string {
@@ -357,9 +389,9 @@ export class MockApiService implements ApiService {
     // Mock模式下返回一个简单的视频对象
     return {
       id: videoId,
-      title: 'Mock视频标题',
-      description: '模拟视频描述',
-      channel_title: '模拟频道',
+      title: '演示视频标题',
+      description: '演示视频描述',
+      channel_title: '演示频道',
       duration: 300,
       view_count: 10000,
       published_at: new Date().toISOString().split('T')[0],

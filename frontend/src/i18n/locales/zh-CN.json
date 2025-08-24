@@ -22,8 +22,11 @@
     "clear": "清除",
     "refresh": "刷新",
     "close": "关闭",
-    "mockMode": "Mock开发模式",
-    "tauriMode": "Tauri桌面应用",
+    "mockMode": "浏览器模式",
+    "tauriMode": "🚀 生产模式",
+    "browserMode": "🌐 浏览器模式",
+    "productionData": "📊 生产数据",
+    "demoData": "🎭 演示数据",
     "configured": "已配置",
     "notConfigured": "未配置",
     "running": "运行中",
@@ -34,6 +37,15 @@
     "configureApi": "配置API密钥",
     "startSearch": "开始搜索视频",
     "manageVideos": "管理视频内容"
+  },
+  "home": {
+    "productionModeTitle": "🚀 生产模式已启动",
+    "productionModeDesc": "请配置YouTube和AI API密钥以启用完整的视频搜索和智能分析功能。配置后即可搜索真实的YouTube视频！",
+    "browserModeTitle": "🌐 浏览器模式",
+    "browserModeDesc": "当前在浏览器中运行，请配置API密钥以启用完整功能。推荐使用 'npm run dev' 或 'cargo tauri dev' 运行桌面应用。",
+    "testModeTitle": "🧪 测试模式",
+    "testModeDesc": "当前在测试模式下运行，使用模拟数据。",
+    "configureNow": "立即配置"
   },
   "nav": {
     "home": "首页",
@@ -58,6 +70,18 @@
     "emptyDescription": "在上方搜索框中输入关键词，找到适合儿童观看的视频"
   },
   "filterModes": {
+    "creative": {
+      "name": "创意艺术",
+      "description": "适合3-8岁，激发艺术创造力"
+    },
+    "nature": {
+      "name": "自然探索",
+      "description": "适合4-10岁，自然科学启蒙"
+    },
+    "language": {
+      "name": "语言学习",
+      "description": "适合3-8岁，语言能力培养"
+    },
     "strict": {
       "name": "严格模式",
       "description": "适合2-4岁，最严格的内容筛选",
@@ -72,6 +96,18 @@
       "name": "教育优先",
       "description": "优先选择教育价值高的内容",
       "features": ["高教育价值", "知识性强", "启发思考"]
+    },
+    "creative": {
+      "name": "创意艺术",
+      "description": "适合3-8岁，激发艺术创造力"
+    },
+    "nature": {
+      "name": "自然探索",
+      "description": "适合4-10岁，自然科学启蒙"
+    },
+    "language": {
+      "name": "语言学习",
+      "description": "适合3-8岁，语言能力培养"
     }
   },
   "video": {
@@ -98,10 +134,80 @@
   "settings": {
     "title": "应用设置",
     "interface": "界面设置",
-    "apiConfig": "API配置",
-    "searchConfig": "搜索配置", 
+    "apiConfig": "AI配置",
+    "youtubeConfig": "YouTube配置",
+    "filterConfig": "过滤条件",
+    "youtubeConfig": "YouTube配置",
+    "alarmConfig": "闹钟设置",
+    "searchConfig": "搜索设置",
+    "alarmConfig": "闹钟设置", 
     "cacheConfig": "缓存配置",
     "advancedConfig": "高级设置",
+    "aiConfigDesc": "配置AI服务来分析和筛选视频内容",
+    "youtubeConfigDesc": "配置YouTube Data API可以获得更准确的视频信息，提升筛选效果",
+    "filterConfigDesc": "设置视频筛选条件和AI分析参数",
+    "searchConfigDesc": "配置搜索偏好和视频时长限制",
+    "alarmConfigDesc": "配置观看时长提醒和闹钟功能",
+    "advancedConfigDesc": "高级功能和界面设置",
+    "quickPresets": "快速预设",
+    "childAge": "孩子年龄",
+    "videoCount": "每次筛选视频数量",
+    "searchLanguage": "搜索语言偏好",
+    "minDuration": "最短时长（分钟）",
+    "defaultAlarmTime": "默认闹钟时间（秒）",
+    "countdownSeconds": "倒计时秒数",
+    "alarmInterval": "闹钟间隔时间（分钟）",
+    "customAlarmMessage": "自定义闹钟消息",
+    "alarmMessagePlaceholder": "例如：该休息了，小朋友！",
+    "defaultAlarmMessage": "该休息了，小朋友！",
+    "age2to4": "2-4岁 (幼儿)",
+    "age3to6": "3-6岁 (学前)",
+    "age4to8": "4-8岁 (学龄前)",
+    "age6to10": "6-10岁 (小学低年级)",
+    "age8to12": "8-12岁 (小学高年级)",
+    "langChinese": "中文",
+    "langEnglish": "英文",
+    "langBoth": "中英文",
+    "themeAuto": "自动",
+    "youtubeApiAdvantages": "YouTube API的优势",
+    "moreAccurateInfo": "更准确的信息",
+    "officialVideoData": "获取官方视频数据",
+    "morePreciseSearch": "更精确的搜索",
+    "advancedSearchFilter": "支持高级搜索过滤",
+    "fasterResponse": "更快的响应",
+    "apiFasterThanScraping": "API比网页抓取更快",
+    "betterFiltering": "更好的筛选",
+    "officialDataAnalysis": "基于官方数据分析",
+    "howToGetYoutubeKey": "如何获取YouTube API密钥",
+    "ageRange": "适龄",
+    "count": "数量",
+    "alarmTypes": "闹钟类型",
+    "autoSaveNote": "所有设置将自动保存到本地",
+    "openaiApiKeyTitle": "OpenAI API密钥",
+    "anthropicApiKeyTitle": "Anthropic API密钥",
+    "alarmFunctionTitle": "闹钟功能说明",
+    "alarmFunctionDesc": "配置观看时长提醒，帮助控制孩子的观看时间，培养良好的观看习惯。",
+    "enableAlarm": "启用闹钟",
+    "disableAlarm": "关闭闹钟",
+    "alarmTimeTooltip": "打开视频后，闹钟将在指定时间后响起",
+    "soundReminder": "声音提醒",
+    "silentMode": "静音模式",
+    "visualReminder": "视觉提醒",
+    "visualOff": "关闭视觉",
+    "vibrationReminder": "震动提醒",
+    "vibrationOff": "关闭震动",
+    "notificationSettings": "通知设置",
+    "dataStatistics": "数据统计",
+    "enableNotifications": "启用通知",
+    "disableNotifications": "关闭通知",
+    "debugMode": "调试模式",
+    "normalMode": "普通模式",
+    "recordUsageStats": "记录使用统计",
+    "disableStats": "关闭统计",
+    "recordFilterStats": "记录筛选统计",
+    "disableFilterStats": "关闭筛选统计",
+    "confirmReset": "确认重置",
+    "confirmResetContent": "确定要重置所有设置到默认值吗？此操作不可撤销。",
     "apiKeyRequired": "API密钥是使用智能筛选功能的必要条件。您需要至少配置一个AI服务提供商的API密钥。所有密钥都安全存储在本地，不会上传到任何服务器。",
     "aiProvider": "首选AI服务提供商",
     "openaiKey": "OpenAI API Key",
@@ -149,7 +255,8 @@
     "editNote": "编辑收藏笔记",
     "notePlaceholder": "为这个视频添加你的笔记或评价...",
     "favoriteTime": "收藏于",
-    "remove": "移除"
+    "remove": "移除",
+    "fromSearch": "来自搜索：{{query}}"
   },
   "help": {
     "title": "使用帮助",
@@ -196,11 +303,11 @@
     "balancedMode": "平衡模式", 
     "educationalMode": "教育优先",
     "unlimited": "无限",
-    "apiTestSkipped": "Mock模式 - API测试跳过",
+    "apiTestSkipped": "浏览器模式 - API测试跳过",
     "apiKeyNotConfigured": "未配置API密钥",
     "apiConnectionNormal": "API连接正常",
     "apiConnectionFailed": "API连接失败",
-    "databaseTestSkipped": "Mock模式 - 数据库测试跳过",
+    "databaseTestSkipped": "浏览器模式 - 数据库测试跳过",
     "databaseConnectionNormal": "数据库连接正常",
     "databaseConnectionFailed": "数据库连接失败",
     "searchSuccessful": "搜索成功，找到{{count}}个视频",
@@ -224,7 +331,13 @@
     "settingsSaved": "设置保存成功！",
     "settingsSaveFailed": "保存设置失败，请重试",
     "apiTestSuccess": "API连接测试成功！",
-    "apiTestFailed": "API连接失败，请检查密钥是否正确"
+    "apiTestFailed": "API连接失败，请检查密钥是否正确",
+    "apiKeyRequired": "请先输入API密钥",
+    "presetApplied": "已应用预设：{{preset}}",
+    "settingsReset": "设置已重置",
+    "settingsExported": "设置已导出",
+    "settingsImported": "设置已导入",
+    "importFailed": "导入失败：文件格式错误"
   },
   "tips": {
     "title": "使用小贴士",
@@ -232,7 +345,7 @@
     "searchKeywords": "建议使用具体的关键词搜索，如【儿童数学启蒙】",
     "filterModes": "可以选择不同的筛选模式适应不同年龄段的孩子",
     "favorites": "收藏功能帮助您保存孩子喜欢的视频",
-    "developmentMode": "当前为前端开发模式，使用模拟数据展示功能"
+    "developmentMode": "当前为浏览器预览模式，使用演示数据展示功能"
   },
   "player": {
     "backToList": "返回列表",
@@ -244,6 +357,30 @@
     "watchDuration": "建议观看时长不超过30分钟",
     "parentSupervision": "建议家长陪同观看",
     "interactiveViewing": "鼓励孩子互动参与",
-    "aiAnalysisNote": "此评分由AI智能分析生成，仅供参考。请家长根据孩子的实际情况做出判断。"
+    "aiAnalysisNote": "此评分由AI智能分析生成，仅供参考。请家长根据孩子的实际情况做出判断。",
+    "defaultVideoTitle": "视频标题",
+    "defaultVideoDesc": "视频描述",
+    "defaultChannelTitle": "频道名称",
+    "apiUnavailable": "无法加载完整视频信息",
+    "favoriteNote": "来自播放页面的收藏",
+    "shareText": "推荐一个不错的儿童教育视频: {{title}}",
+    "linkCopied": "链接已复制到剪贴板",
+    "videoNotFound": "视频未找到",
+    "videoNotFoundDesc": "抱歉，无法找到您要观看的视频。",
+    "backToHome": "返回首页",
+    "videoPlayer": "视频播放器",
+    "playerPlaceholder": "(实际应用中这里会嵌入YouTube播放器)",
+    "recommendIndex": "推荐指数",
+    "initError": "视频播放器初始化失败",
+    "unknownError": "发生未知错误",
+    "invalidVideoId": "无效的视频ID",
+    "html5Error": "HTML5播放器错误",
+    "embedDisabled": "此视频无法在这里播放，请在YouTube上观看。",
+    "embedDisabledDesc": "上传者禁用了此视频的嵌入功能。",
+    "playbackError": "视频播放错误",
+    "watchOnYouTube": "在YouTube上观看",
+    "tryAgain": "重试",
+    "retry": "重试",
+    "fullscreen": "全屏"
   }
 }

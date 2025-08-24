@@ -217,7 +217,7 @@ const Test: React.FC = () => {
           <Paragraph>
             {t('test.testDescription')}
             {t('test.currentMode')}：<Tag color={isConnected ? 'green' : 'blue'}>
-              {isConnected ? t('common.tauriMode') : t('common.mockMode')}
+              {isConnected ? '🚀 生产模式' : '🌐 浏览器模式'}
             </Tag>
           </Paragraph>
           
@@ -378,7 +378,7 @@ const Test: React.FC = () => {
               <div>
                 <Text strong>运行模式：</Text>
                 <Tag color={isConnected ? 'green' : 'blue'} style={{ marginLeft: '0.5rem' }}>
-                  {isConnected ? 'Tauri桌面应用' : 'Mock开发模式'}
+                  {isConnected ? '🚀 Tauri桌面应用' : '🌐 浏览器模式'}
                 </Tag>
               </div>
               <div>

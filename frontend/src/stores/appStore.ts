@@ -41,7 +41,25 @@ const defaultSettings: AppSettings = {
   max_video_duration_minutes: 20,
   ai_provider: 'openai',
   language: 'zh-CN',
-  theme: 'light'
+  theme: 'light',
+  child_age: '3-6',
+  video_count: 10,
+  default_platforms: ['youtube'],
+  search_language: 'en',
+  min_duration: 0,
+  max_duration: 0,
+  enable_alarm: false,
+  default_alarm_time: 600,
+  countdown_seconds: 10,
+  alarm_interval: 10,
+  enable_alarm_sound: false,
+  enable_visual_alarm: false,
+  enable_vibration_alarm: false,
+  alarm_message: 'Time to close the app!',
+  enable_notifications: true,
+  enable_debug_mode: false,
+  enable_usage_stats: true,
+  enable_filter_stats: true,
 };
 
 const defaultLoading: LoadingState = {

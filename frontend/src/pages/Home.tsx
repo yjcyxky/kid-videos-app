@@ -76,7 +76,7 @@ const Home: React.FC = () => {
 
   const handleVideoFavorite = async (video: Video) => {
     try {
-      await addToFavorites(video.id, `来自搜索：${searchQuery}`)
+      await addToFavorites(video.id, t('favorites.fromSearch', { query: searchQuery }))
       message.success(t('messages.favoriteAdded'))
     } catch (error) {
       message.error(t('messages.favoriteAddFailed'))
@@ -149,11 +149,32 @@ const Home: React.FC = () => {
 
   return (
     <>
-      {/* 开发模式提示 */}
-      {apiMode === 'mock' && (
+      {/* API配置提示 - 在Tauri和Browser模式下显示，提示配置API */}
+      {(apiMode === 'tauri' || apiMode === 'browser') && (
         <Alert
-          message={t('tips.title')}
-          description={t('tips.developmentMode')}
+          message={apiMode === 'tauri' ? t('home.productionModeTitle') : t('home.browserModeTitle')}
+          description={apiMode === 'tauri' ? t('home.productionModeDesc') : t('home.browserModeDesc')}
+          type="warning"
+          showIcon
+          closable
+          style={{ margin: '1rem 2rem', borderRadius: '15px' }}
+          action={
+            <Button 
+              size="small" 
+              type="primary"
+              onClick={() => navigate('/settings')}
+            >
+              {t('home.configureNow')}
+            </Button>
+          }
+        />
+      )}
+      
+      {/* 测试模式提示 - 只在测试模式下显示 */}
+      {apiMode === 'test' && (
+        <Alert
+          message={t('home.testModeTitle')}
+          description={t('home.testModeDesc')}
           type="info"
           showIcon
           closable
@@ -171,7 +192,7 @@ const Home: React.FC = () => {
               placeholder={t('search.inputPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               autoComplete="off"
             />
             <button 
@@ -214,8 +235,8 @@ const Home: React.FC = () => {
           
           {/* 快速搜索建议 */}
           <div style={{ marginTop: '1rem' }}>
-            <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginRight: '1rem' }}>
-              {t('search.hotKeywords')}：
+            <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginRight: '0.5rem' }}>
+              {t('search.hotKeywords')}
             </span>
             <Space wrap>
               {hotKeywords.map(keyword => (

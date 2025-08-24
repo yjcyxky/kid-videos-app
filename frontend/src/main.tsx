@@ -12,6 +12,41 @@ import App from './App'
 import '@/styles/index.css'
 import '@/i18n'
 
+// 强制环境检测和模式设置
+async function detectEnvironmentAndSetMode() {
+  console.log('🔍 Starting environment detection...');
+  
+  // 检测是否在Tauri环境中
+  const checks = {
+    hasTauriGlobal: !!(window as any).__TAURI__,
+    hasTauriInvoke: !!(window as any).__TAURI_INVOKE__,
+    hasTauriMeta: !!(window as any).__TAURI_METADATA__,
+    userAgentCheck: navigator.userAgent.includes('Tauri'),
+    userAgent: navigator.userAgent
+  };
+  
+  console.log('🔍 Environment checks:', checks);
+  
+  const isTauriEnv = checks.hasTauriGlobal || checks.hasTauriInvoke || checks.hasTauriMeta || checks.userAgentCheck;
+  
+  if (isTauriEnv) {
+    // 强制设置Tauri环境标识
+    (window as any).__IS_TAURI_APP__ = true;
+    (window as any).__API_MODE__ = 'production';
+    console.log('🚀 FORCE: Setting Tauri Production Mode');
+    console.log('✅ Production mode flags set');
+  } else {
+    (window as any).__IS_TAURI_APP__ = false;
+    (window as any).__API_MODE__ = 'browser';
+    console.log('🌐 Browser preview mode detected');
+  }
+  
+  // 延迟确保标识生效
+  await new Promise(resolve => setTimeout(resolve, 200));
+  
+  console.log('✅ Environment detection completed, mode:', (window as any).__API_MODE__);
+}
+
 // 主题提供者组件
 function AppWithProviders() {
   const [theme, setTheme] = React.useState<'light' | 'dark'>('light')
@@ -87,10 +122,20 @@ function AppWithProviders() {
   )
 }
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <BrowserRouter>
-      <AppWithProviders />
-    </BrowserRouter>
-  </React.StrictMode>,
-)
+// 启动应用
+async function startApp() {
+  // 首先检测环境并设置模式
+  await detectEnvironmentAndSetMode();
+  
+  // 然后渲染应用
+  ReactDOM.createRoot(document.getElementById('root')!).render(
+    <React.StrictMode>
+      <BrowserRouter>
+        <AppWithProviders />
+      </BrowserRouter>
+    </React.StrictMode>,
+  );
+}
+
+// 启动应用
+startApp();

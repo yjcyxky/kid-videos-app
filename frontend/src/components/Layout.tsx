@@ -96,16 +96,16 @@ const Layout: React.FC = () => {
           <span className="status-text">
             {isConnected ? 
               t('common.tauriMode') : 
-              t('common.mockMode')
+              t('common.browserMode')
             }
           </span>
         </div>
         
         <div className="cache-info">
-          <span>{t('settings.cacheSettings')}：</span>
+          <span>{t('search.results')}:</span>
           <span>{searchResults.length}</span>
           <span style={{ marginLeft: '0.5rem' }}>
-            {apiMode === 'mock' ? t('settings.unlimited') : '24h'}
+            {isConnected ? t('common.productionData', '📊 生产数据') : t('common.demoData', '🎭 演示数据')}
           </span>
         </div>
       </footer>

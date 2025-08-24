@@ -21,6 +21,13 @@ tauri-plugin-sql = { version = "2.0.0", features = ["sqlite"] }
 tauri-plugin-store = { version = "2.0.0" }
 tauri-plugin-shell = { version = "2.0.0" }
 chrono = { version = "0.4", features = ["serde"] }
+reqwest = { version = "0.12", features = ["json"] }
+tokio = { version = "1.0", features = ["full"] }
+anyhow = "1.0"
+url = "2.4"
+urlencoding = "2.1"
+futures = "0.3"
+sqlx = { version = "0.8", features = ["runtime-tokio-native-tls", "sqlite"] }
 
 [features]
 # by default Tauri runs in production mode
