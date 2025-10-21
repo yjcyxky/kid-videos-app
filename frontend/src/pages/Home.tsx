@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react'
-import { 
-  Button, 
-  Space, 
+import {
+  Button,
+  Space,
   Spin,
   message,
-  Alert,
-  Modal
+  Modal,
+  Checkbox
 } from 'antd'
 import { 
   HeartOutlined,
@@ -15,7 +15,6 @@ import { useNavigate } from 'react-router-dom'
 
 import { useAppStore } from '@/stores/appStore'
 import { SearchRequest, Video } from '@/types'
-import { getApiMode } from '@/services/api'
 import useI18n from '@/hooks/useI18n'
 
 
@@ -29,6 +28,7 @@ const Home: React.FC = () => {
     searchVideos,
     deleteVideo,
     loadSettings,
+    loadCachedVideos,
     clearCache,
     setCurrentSearch,
     addToFavorites,
@@ -40,12 +40,13 @@ const Home: React.FC = () => {
   const [platform] = useState('youtube')
   const [videoCount, setVideoCount] = useState(10)
   const [filterMode, setFilterMode] = useState('balanced')
-  const [apiMode] = useState(getApiMode())
+  const [skipAI, setSkipAI] = useState(false)
 
   useEffect(() => {
     loadSettings()
     loadFavorites()
-  }, [loadSettings, loadFavorites])
+    loadCachedVideos() // 从数据库加载缓存的视频
+  }, [loadSettings, loadFavorites, loadCachedVideos])
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
@@ -59,11 +60,18 @@ const Home: React.FC = () => {
         query: searchQuery,
         platform: platform as 'youtube' | 'youtube_kids',
         filter_mode: filterMode as 'strict' | 'balanced' | 'educational',
-        max_results: videoCount
+        max_results: videoCount,
+        skip_ai_analysis: skipAI
       }
-      
+
       const response = await searchVideos(request)
-      message.success(t('messages.searchSuccess', { count: response.videos.length }))
+
+      // 提示新增视频数量
+      if (response.total_found > 0) {
+        message.success(t('messages.searchSuccess', { count: response.total_found }) + ` (${t('search.newVideosAdded', 'new videos added')})`)
+      } else {
+        message.info(t('search.noDuplicates', 'No new videos found (all already in results)'))
+      }
     } catch (error) {
       message.error(t('messages.searchFailed'))
       console.error('Search error:', error)
@@ -100,13 +108,22 @@ const Home: React.FC = () => {
     })
   }
 
-  const handleClearCache = async () => {
-    try {
-      await clearCache()
-      message.success(t('messages.cacheClearSuccess'))
-    } catch (error) {
-      message.error(t('messages.cacheClearFailed'))
-    }
+  const handleClearCache = () => {
+    Modal.confirm({
+      title: t('search.confirmClearCache', 'Clear All Cached Videos?'),
+      content: t('search.confirmClearCacheDesc', 'This will permanently delete all cached videos from the database. You can delete individual videos instead.'),
+      okText: t('common.confirm'),
+      okType: 'danger',
+      cancelText: t('common.cancel'),
+      onOk: async () => {
+        try {
+          await clearCache()
+          message.success(t('messages.cacheClearSuccess'))
+        } catch (error) {
+          message.error(t('messages.cacheClearFailed'))
+        }
+      }
+    })
   }
 
   const formatDuration = (seconds?: number) => {
@@ -150,7 +167,7 @@ const Home: React.FC = () => {
   return (
     <>
       {/* API配置提示 - 在Tauri和Browser模式下显示，提示配置API */}
-      {(apiMode === 'tauri' || apiMode === 'browser') && (
+      {/* {(apiMode === 'tauri' || apiMode === 'browser') && (
         <Alert
           message={apiMode === 'tauri' ? t('home.productionModeTitle') : t('home.browserModeTitle')}
           description={apiMode === 'tauri' ? t('home.productionModeDesc') : t('home.browserModeDesc')}
@@ -168,10 +185,10 @@ const Home: React.FC = () => {
             </Button>
           }
         />
-      )}
+      )} */}
       
       {/* 测试模式提示 - 只在测试模式下显示 */}
-      {apiMode === 'test' && (
+      {/* {apiMode === 'test' && (
         <Alert
           message={t('home.testModeTitle')}
           description={t('home.testModeDesc')}
@@ -180,7 +197,7 @@ const Home: React.FC = () => {
           closable
           style={{ margin: '1rem 2rem', borderRadius: '15px' }}
         />
-      )}
+      )} */}
 
       {/* 搜索区域 - 完全复刻Chrome扩展风格 */}
       <section className="search-section">
@@ -207,7 +224,7 @@ const Home: React.FC = () => {
           <div className="search-options">
             <div className="option-group">
               <label className="option-label">{t('search.videoCount')}：</label>
-              <select 
+              <select
                 className="select-input"
                 value={videoCount}
                 onChange={(e) => setVideoCount(Number(e.target.value))}
@@ -218,18 +235,32 @@ const Home: React.FC = () => {
                 <option value={20}>20</option>
               </select>
             </div>
-            
+
             <div className="option-group">
               <label className="option-label">{t('search.filterMode')}：</label>
-              <select 
+              <select
                 className="select-input"
                 value={filterMode}
                 onChange={(e) => setFilterMode(e.target.value)}
+                disabled={skipAI}
               >
                 <option value="strict">{t('filterModes.strict.name')}</option>
                 <option value="balanced">{t('filterModes.balanced.name')}</option>
                 <option value="educational">{t('filterModes.educational.name')}</option>
               </select>
+            </div>
+
+            <div className="option-group">
+              <Checkbox
+                checked={skipAI}
+                onChange={(e) => setSkipAI(e.target.checked)}
+                style={{
+                  color: 'var(--text-primary)',
+                  fontSize: '0.95rem'
+                }}
+              >
+                ⚡ {t('search.skipAI', 'Skip AI Analysis')} <span style={{ color: '#52c41a', fontSize: '0.85rem' }}>({t('search.fasterSearch', 'Faster')})</span>
+              </Checkbox>
             </div>
           </div>
           
@@ -274,34 +305,35 @@ const Home: React.FC = () => {
         </section>
       ) : searchResults.length > 0 ? (
         <section className="video-list-section">
-          <div className="section-header" style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
+          <div className="section-header" style={{
+            display: 'flex',
+            justifyContent: 'space-between',
             alignItems: 'center',
             marginBottom: '1rem',
             padding: '0 2rem'
           }}>
-            <h2 style={{ 
-              margin: 0, 
-              fontSize: '1.5rem', 
+            <h2 style={{
+              margin: 0,
+              fontSize: '1.5rem',
               color: 'var(--text-primary)',
               fontWeight: 'bold'
             }}>
-              {t('search.results')} ({searchResults.length})
+              {t('search.results')} ({searchResults.length} {t('search.videosTotal', 'videos')})
             </h2>
             <div className="list-actions">
               <Button
                 className="btn btn-secondary"
-                onClick={() => window.location.reload()}
+                onClick={handleClearCache}
                 style={{ marginRight: '0.5rem' }}
+                danger
               >
-                🔄 {t('common.refresh')}
+                🗑️ {t('search.clearAllCache', 'Clear All')}
               </Button>
               <Button
                 className="btn btn-secondary"
-                onClick={handleClearCache}
+                onClick={() => window.location.reload()}
               >
-                🗑️ {t('nav.clearCache')}
+                🔄 {t('common.refresh')}
               </Button>
             </div>
           </div>

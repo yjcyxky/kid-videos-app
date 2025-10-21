@@ -178,20 +178,21 @@ export const api = {
   analyzeVideo: (request: any) => ApiFactory.getInstance().analyzeVideo(request),
   saveVideo: (video: any) => ApiFactory.getInstance().saveVideo(video),
   deleteVideo: (videoId: string) => ApiFactory.getInstance().deleteVideo(videoId),
-  
+  getCachedVideos: () => ApiFactory.getInstance().getCachedVideos(),
+
   // 收藏相关方法
   getFavorites: () => ApiFactory.getInstance().getFavorites(),
   addToFavorites: (videoId: string, notes?: string) => ApiFactory.getInstance().addToFavorites(videoId, notes),
   removeFromFavorites: (favoriteId: number) => ApiFactory.getInstance().removeFromFavorites(favoriteId),
-  
+
   // 设置相关方法
   getSettings: () => ApiFactory.getInstance().getSettings(),
   saveSettings: (settings: any) => ApiFactory.getInstance().saveSettings(settings),
-  
+
   // 缓存相关方法
   clearCache: () => ApiFactory.getInstance().clearCache(),
   getSearchHistory: (limit?: number) => ApiFactory.getInstance().getSearchHistory(limit),
-  
+
   // 测试方法
   testAPIConnections
 }

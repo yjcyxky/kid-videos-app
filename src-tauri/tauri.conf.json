@@ -5,7 +5,7 @@
   "identifier": "com.kidvideos.app",
   "build": {
     "beforeDevCommand": "npm run dev:frontend",
-    "beforeBuildCommand": "npm run build:frontend", 
+    "beforeBuildCommand": "npm run build:frontend",
     "frontendDist": "../frontend/dist",
     "devUrl": "http://localhost:1420"
   },
@@ -14,8 +14,12 @@
       {
         "width": 1200,
         "height": 800,
-        "title": "儿童视频智能筛选器"
+        "title": "儿童视频智能筛选器",
+        "fullscreen": false
       }
-    ]
+    ],
+    "security": {
+      "capabilities": ["default"]
+    }
   }
 }

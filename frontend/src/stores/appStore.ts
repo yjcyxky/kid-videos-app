@@ -19,17 +19,18 @@ interface AppStore {
   settings: AppSettings;
   loading: LoadingState;
   searchHistory: SearchHistory[];
-  
+
   // Actions
   setCurrentSearch: (query: string) => void;
   searchVideos: (request: SearchRequest) => Promise<SearchResponse>;
-  deleteVideo: (videoId: string) => Promise<void>; // 新增删除视频功能
+  deleteVideo: (videoId: string) => Promise<void>;
+  loadCachedVideos: () => Promise<void>; // 新增：从数据库加载缓存视频
   loadFavorites: () => Promise<void>;
   addToFavorites: (videoId: string, notes?: string) => Promise<void>;
   removeFromFavorites: (favoriteId: number) => Promise<void>;
   loadSettings: () => Promise<void>;
   saveSettings: (settings: AppSettings) => Promise<void>;
-  clearCache: () => Promise<void>;
+  clearCache: () => Promise<void>; // 清空数据库缓存和搜索结果
   loadSearchHistory: () => Promise<void>;
   setLoading: (key: keyof LoadingState, value: boolean) => void;
 }
@@ -86,23 +87,36 @@ export const useAppStore = create<AppStore>()(
         },
 
         searchVideos: async (request: SearchRequest): Promise<SearchResponse> => {
-          set(state => ({ 
+          set(state => ({
             loading: { ...state.loading, searching: true }
           }));
 
           try {
             const response = await api.searchVideos(request);
-            set({ 
-              searchResults: response.videos,
+
+            // 累加搜索结果，并去重
+            const existingResults = get().searchResults;
+            const existingIds = new Set(existingResults.map(v => v.id));
+            const newVideos = response.videos.filter(v => !existingIds.has(v.id));
+
+            console.log(`📊 Search completed: ${response.videos.length} returned, ${newVideos.length} new videos`);
+
+            set({
+              searchResults: [...existingResults, ...newVideos], // 累加新结果
               loading: { ...get().loading, searching: false }
             });
-            
+
             // 保存搜索历史
             await get().loadSearchHistory();
-            
-            return response;
+
+            // 返回带有新增数量的响应
+            return {
+              ...response,
+              videos: newVideos, // 返回新增的视频用于提示
+              total_found: newVideos.length
+            };
           } catch (error) {
-            set(state => ({ 
+            set(state => ({
               loading: { ...state.loading, searching: false }
             }));
             throw error;
@@ -112,7 +126,7 @@ export const useAppStore = create<AppStore>()(
         deleteVideo: async (videoId: string) => {
           try {
             await api.deleteVideo(videoId);
-            
+
             // 从搜索结果中移除
             set(state => ({
               searchResults: state.searchResults.filter(video => video.id !== videoId)
@@ -120,6 +134,17 @@ export const useAppStore = create<AppStore>()(
           } catch (error) {
             console.error('Failed to delete video:', error);
             throw error;
+          }
+        },
+
+        loadCachedVideos: async () => {
+          try {
+            console.log('📚 Loading cached videos from database...');
+            const videos = await api.getCachedVideos();
+            console.log(`✅ Loaded ${videos.length} videos from database`);
+            set({ searchResults: videos });
+          } catch (error) {
+            console.error('Failed to load cached videos:', error);
           }
         },
 
@@ -191,8 +216,11 @@ export const useAppStore = create<AppStore>()(
 
         clearCache: async () => {
           try {
+            console.log('🗑️ Clearing database cache and search results...');
             await api.clearCache();
+            // 同时清空前端显示的搜索结果
             set({ searchResults: [] });
+            console.log('✅ Cache and results cleared');
           } catch (error) {
             console.error('Failed to clear cache:', error);
             throw error;
@@ -227,6 +255,7 @@ export const useAppStore = create<AppStore>()(
           settings: state.settings,
           favorites: state.favorites,
           searchHistory: state.searchHistory,
+          // 不再持久化 searchResults 到 localStorage，改为从数据库加载
         }),
       }
     ),

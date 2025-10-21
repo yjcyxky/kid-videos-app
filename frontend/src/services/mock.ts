@@ -148,9 +148,16 @@ export class MockApiService implements ApiService {
   async deleteVideo(videoId: string): Promise<string> {
     console.info(`🗑️ Mock: Deleting video ${videoId}`)
     await this.delay(300)
-    
+
     // 从模拟的搜索结果中移除（实际应用中会从数据库删除）
     return 'Video deleted successfully (Preview mode)'
+  }
+
+  // 获取所有缓存视频
+  async getCachedVideos(): Promise<Video[]> {
+    console.info('📚 Mock: Loading cached videos')
+    await this.delay(200)
+    return []
   }
 
   private getDefaultSettings(): AppSettings {

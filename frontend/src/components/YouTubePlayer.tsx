@@ -5,6 +5,7 @@ import {
   PauseCircleOutlined,
   SoundOutlined,
   ExpandOutlined,
+  FullscreenExitOutlined,
   ReloadOutlined,
   LoadingOutlined
 } from '@ant-design/icons';
@@ -43,6 +44,7 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEmbedDisabled, setIsEmbedDisabled] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load YouTube IFrame API
@@ -68,7 +70,28 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
 
     loadYouTubeAPI();
 
+    // Setup ESC key listener for exiting fullscreen
+    const handleEscKey = async (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isFullscreen) {
+        try {
+          const isTauri = typeof window !== 'undefined' &&
+                         ((window as any).__TAURI__ || (window as any).__IS_TAURI_APP__);
+          if (isTauri) {
+            const { getCurrentWindow } = await import('@tauri-apps/api/window');
+            const appWindow = getCurrentWindow();
+            await appWindow.setFullscreen(false);
+            setIsFullscreen(false);
+          }
+        } catch (error) {
+          console.error('Failed to exit fullscreen:', error);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleEscKey);
+
     return () => {
+      window.removeEventListener('keydown', handleEscKey);
       if (playerRef.current) {
         try {
           playerRef.current.destroy();
@@ -80,7 +103,7 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
         clearInterval(progressIntervalRef.current);
       }
     };
-  }, [videoId]);
+  }, [videoId, isFullscreen]);
 
   const initializePlayer = () => {
     if (!window.YT || !window.YT.Player || !containerRef.current) {
@@ -95,7 +118,7 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
         height: '100%',
         playerVars: {
           autoplay: autoplay ? 1 : 0,
-          // controls: 0, // Hide default controls
+          controls: 1, // Enable YouTube native controls (including fullscreen)
           rel: 0, // Don't show related videos
           modestbranding: 1, // Minimal YouTube branding
           fs: 1, // Allow fullscreen
@@ -243,37 +266,95 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
     }
   };
 
-  const toggleFullscreen = () => {
-    // Get the entire player container for fullscreen
-    const playerContainer = containerRef.current?.closest('.youtube-player-container');
-    
-    if (!playerContainer) return;
-    
-    // Check if already in fullscreen
-    const isInFullscreen = document.fullscreenElement || 
-                          (document as any).webkitFullscreenElement || 
-                          (document as any).mozFullScreenElement;
-    
-    if (isInFullscreen) {
-      // Exit fullscreen
-      if (document.exitFullscreen) {
-        document.exitFullscreen();
-      } else if ((document as any).webkitExitFullscreen) {
-        (document as any).webkitExitFullscreen();
-      } else if ((document as any).mozCancelFullScreen) {
-        (document as any).mozCancelFullScreen();
+  const toggleFullscreen = async () => {
+    console.log('🎬 Attempting to toggle fullscreen, current state:', isFullscreen);
+
+    try {
+      // Check if we're in Tauri environment
+      const isTauri = typeof window !== 'undefined' &&
+                      ((window as any).__TAURI__ || (window as any).__IS_TAURI_APP__);
+
+      console.log('🔍 Environment check:', {
+        isTauri,
+        hasTauriGlobal: !!(window as any).__TAURI__,
+        isTauriAppFlag: !!(window as any).__IS_TAURI_APP__
+      });
+
+      if (isTauri) {
+        console.log('🚀 Using Tauri Window API for fullscreen...');
+
+        try {
+          const { getCurrentWindow } = await import('@tauri-apps/api/window');
+          const appWindow = getCurrentWindow();
+
+          if (isFullscreen) {
+            // Exit fullscreen
+            console.log('📤 Exiting fullscreen...');
+            await appWindow.setFullscreen(false);
+            setIsFullscreen(false);
+            console.log('✅ Exited fullscreen mode (Tauri)');
+            message.success(t('player.exitedFullscreen', 'Exited fullscreen'));
+          } else {
+            // Enter fullscreen
+            console.log('📥 Entering fullscreen...');
+            await appWindow.setFullscreen(true);
+            setIsFullscreen(true);
+            console.log('✅ Entered fullscreen mode (Tauri)');
+            message.success(t('player.enteredFullscreen', 'Entered fullscreen'));
+          }
+        } catch (tauriError) {
+          console.error('❌ Tauri fullscreen failed:', tauriError);
+          throw new Error(`Tauri fullscreen error: ${tauriError}`);
+        }
+      } else {
+        console.log('🌐 Using browser Fullscreen API...');
+
+        // Fallback to standard browser Fullscreen API
+        const playerContainer = containerRef.current?.closest('.youtube-player-container') as HTMLElement;
+
+        if (!playerContainer) {
+          console.error('❌ Player container not found');
+          return;
+        }
+
+        const isInFullscreen = document.fullscreenElement ||
+                              (document as any).webkitFullscreenElement ||
+                              (document as any).mozFullScreenElement;
+
+        if (isInFullscreen) {
+          // Exit fullscreen
+          if (document.exitFullscreen) {
+            await document.exitFullscreen();
+          } else if ((document as any).webkitExitFullscreen) {
+            await (document as any).webkitExitFullscreen();
+          } else if ((document as any).mozCancelFullScreen) {
+            await (document as any).mozCancelFullScreen();
+          }
+          setIsFullscreen(false);
+          console.log('✅ Exited fullscreen mode (Browser)');
+        } else {
+          // Enter fullscreen
+          if (playerContainer.requestFullscreen) {
+            await playerContainer.requestFullscreen();
+          } else if ((playerContainer as any).webkitRequestFullscreen) {
+            await (playerContainer as any).webkitRequestFullscreen();
+          } else if ((playerContainer as any).mozRequestFullScreen) {
+            await (playerContainer as any).mozRequestFullScreen();
+          } else if ((playerContainer as any).msRequestFullscreen) {
+            await (playerContainer as any).msRequestFullscreen();
+          }
+          setIsFullscreen(true);
+          console.log('✅ Entered fullscreen mode (Browser)');
+        }
       }
-    } else {
-      // Enter fullscreen
-      if (playerContainer.requestFullscreen) {
-        playerContainer.requestFullscreen();
-      } else if ((playerContainer as any).webkitRequestFullscreen) {
-        (playerContainer as any).webkitRequestFullscreen();
-      } else if ((playerContainer as any).mozRequestFullScreen) {
-        (playerContainer as any).mozRequestFullScreen();
-      } else if ((playerContainer as any).msRequestFullscreen) {
-        (playerContainer as any).msRequestFullscreen();
-      }
+    } catch (error) {
+      console.error('❌ Fullscreen toggle failed:', error);
+      console.error('Error details:', {
+        name: (error as any)?.name,
+        message: (error as any)?.message,
+        stack: (error as any)?.stack
+      });
+      message.error(`${t('player.fullscreenError', 'Failed to toggle fullscreen')}: ${(error as any)?.message || error}`);
     }
   };
 
@@ -341,10 +422,34 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
   }
 
   return (
-    <div className="youtube-player-container" style={{ width: '100%', position: 'relative' }}>
+    <div
+      className="youtube-player-container"
+      style={{
+        width: '100%',
+        position: isFullscreen ? 'fixed' : 'relative',
+        top: isFullscreen ? 0 : 'auto',
+        left: isFullscreen ? 0 : 'auto',
+        right: isFullscreen ? 0 : 'auto',
+        bottom: isFullscreen ? 0 : 'auto',
+        zIndex: isFullscreen ? 9999 : 'auto',
+        background: isFullscreen ? '#000' : 'transparent'
+      }}
+    >
       {/* Video Container */}
-      <div style={{ width: '100%', aspectRatio: '16/9', background: '#000', position: 'relative' }}>
-        <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
+      <div style={{
+        width: '100%',
+        height: isFullscreen ? '100vh' : 'auto',
+        aspectRatio: isFullscreen ? 'auto' : '16/9',
+        background: '#000',
+        position: 'relative',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <div ref={containerRef} style={{
+          width: '100%',
+          height: isFullscreen ? '100%' : '100%'
+        }} />
         
         {/* Loading Overlay - Only show when truly loading, not during playback */}
         {isLoading && !isPlayerReady && (
@@ -370,8 +475,13 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
       {isPlayerReady && (
         <div className="player-controls" style={{
           padding: '12px',
-          background: '#f0f0f0',
-          borderTop: '1px solid #d9d9d9'
+          background: isFullscreen ? 'rgba(0, 0, 0, 0.8)' : '#f0f0f0',
+          borderTop: isFullscreen ? 'none' : '1px solid #d9d9d9',
+          position: isFullscreen ? 'absolute' : 'relative',
+          bottom: isFullscreen ? 0 : 'auto',
+          left: isFullscreen ? 0 : 'auto',
+          right: isFullscreen ? 0 : 'auto',
+          zIndex: isFullscreen ? 10000 : 'auto'
         }}>
           <Space direction="vertical" style={{ width: '100%' }} size="small">
             {/* Progress Bar */}
@@ -410,13 +520,14 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                 </Space>
               </Space>
 
-              {/* Fullscreen */}
+              {/* Fullscreen - Custom implementation for Tauri */}
               <Button
-                icon={<ExpandOutlined />}
+                icon={isFullscreen ? <FullscreenExitOutlined /> : <ExpandOutlined />}
                 onClick={toggleFullscreen}
-                title={t('player.fullscreen', 'Fullscreen')}
+                title={isFullscreen ? t('player.exitFullscreen', 'Exit Fullscreen (ESC)') : t('player.fullscreen', 'Fullscreen')}
+                type={isFullscreen ? 'primary' : 'default'}
               >
-                {t('player.fullscreen', 'Fullscreen')}
+                {isFullscreen ? t('player.exitFullscreen', 'Exit') : t('player.fullscreen', 'Fullscreen')}
               </Button>
             </div>
           </Space>

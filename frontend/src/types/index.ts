@@ -24,6 +24,7 @@ export interface SearchRequest {
   platform: 'youtube' | 'youtube_kids';
   filter_mode: 'strict' | 'balanced' | 'educational';
   max_results?: number;
+  skip_ai_analysis?: boolean; // 临时禁用AI分析，直接返回搜索结果
 }
 
 export interface SearchResponse {

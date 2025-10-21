@@ -106,6 +106,21 @@ export class TauriApiService implements ApiService {
     }
   }
 
+  // 获取所有缓存视频
+  async getCachedVideos(): Promise<Video[]> {
+    try {
+      console.info('📚 Production: Loading cached videos from database...')
+      const invoke = await getTauriInvoke()
+      const videos = await invoke<Video[]>('get_cached_videos')
+      console.info(`✅ Loaded ${videos.length} cached videos from database`)
+      return videos
+    } catch (error) {
+      console.error('❌ Production get cached videos failed:', error)
+      console.warn('🔄 Using empty list as fallback')
+      return []
+    }
+  }
+
   // 获取收藏列表
   async getFavorites(): Promise<FavoriteVideo[]> {
     try {

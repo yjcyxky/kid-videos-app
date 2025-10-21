@@ -37,6 +37,7 @@ pub struct SearchRequest {
     pub platform: String,
     pub filter_mode: String,
     pub max_results: Option<i32>,
+    pub skip_ai_analysis: Option<bool>, // 临时禁用AI分析，直接返回搜索结果
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -1402,6 +1403,24 @@ async fn search_videos(
     let search_time = start_time.elapsed().as_secs_f64();
     let ai_start_time = std::time::Instant::now();
 
+    // 检查是否跳过AI分析
+    if request.skip_ai_analysis.unwrap_or(false) {
+        println!("⚡ Skipping AI analysis for faster results (user requested)");
+
+        // 先计算总数
+        let total_found = videos.len() as i32;
+
+        // 保存搜索历史
+        batch_save_videos(videos.clone(), request.query.clone(), request.platform.clone(), state).await?;
+
+        return Ok(SearchResponse {
+            videos,
+            total_found,
+            search_time,
+            ai_analysis_time: 0.0,
+        });
+    }
+
     // 对视频进行AI分析 - 使用批量分析优化性能
     if !ai_key.is_empty() && !videos.is_empty() {
         println!("🤖 Batch analyzing {} videos with {}", videos.len(), ai_provider);
@@ -1794,18 +1813,43 @@ async fn batch_save_videos(
     Ok(format!("Successfully saved {} videos", count))
 }
 
-// 清除所有缓存的视频  
+// 获取所有缓存的视频
+#[command]
+async fn get_cached_videos(
+    state: tauri::State<'_, AppState>,
+) -> Result<Vec<Video>, String> {
+    println!("📚 Production: Loading all cached videos from database");
+
+    let rows = sqlx::query_as::<_, (String,)>(
+        "SELECT video_data FROM cached_videos ORDER BY cached_at DESC"
+    )
+    .fetch_all(&*state.db)
+    .await
+    .map_err(|e| format!("Failed to load cached videos: {}", e))?;
+
+    let mut videos = Vec::new();
+    for (video_data,) in rows {
+        if let Ok(video) = serde_json::from_str::<Video>(&video_data) {
+            videos.push(video);
+        }
+    }
+
+    println!("✅ Loaded {} cached videos from database", videos.len());
+    Ok(videos)
+}
+
+// 清除所有缓存的视频
 #[command]
 async fn clear_cache(
     state: tauri::State<'_, AppState>,
 ) -> Result<String, String> {
     println!("🗑️ Production: Clearing all cached videos");
-    
+
     let result = sqlx::query("DELETE FROM cached_videos")
         .execute(&*state.db)
         .await
         .map_err(|e| format!("Failed to clear cache: {}", e))?;
-    
+
     Ok(format!("Cleared {} cached videos", result.rows_affected()))
 }
 
@@ -2155,6 +2199,7 @@ fn main() {
             save_video,
             batch_save_videos,
             delete_video,
+            get_cached_videos,
             get_favorites,
             add_to_favorites,
             remove_from_favorites,
