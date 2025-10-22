@@ -378,6 +378,8 @@
     "embedDisabled": "此视频无法在这里播放，请在YouTube上观看。",
     "embedDisabledDesc": "上传者禁用了此视频的嵌入功能。",
     "playbackError": "视频播放错误",
+    "temporaryError": "临时错误，正在重试",
+    "loadingError": "加载失败，正在重试",
     "watchOnYouTube": "在YouTube上观看",
     "tryAgain": "重试",
     "retry": "重试",

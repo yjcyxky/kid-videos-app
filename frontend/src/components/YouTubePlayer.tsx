@@ -46,6 +46,9 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
   const [isEmbedDisabled, setIsEmbedDisabled] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const initTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const retryCountRef = useRef(0);
+  const MAX_RETRIES = 3;
 
   // Load YouTube IFrame API
   useEffect(() => {
@@ -92,6 +95,10 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
 
     return () => {
       window.removeEventListener('keydown', handleEscKey);
+      if (initTimeoutRef.current) {
+        clearTimeout(initTimeoutRef.current);
+        initTimeoutRef.current = null;
+      }
       if (playerRef.current) {
         try {
           playerRef.current.destroy();
@@ -106,8 +113,14 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
   }, [videoId, isFullscreen]);
 
   const initializePlayer = () => {
+    // 清理之前的timeout，防止重复初始化
+    if (initTimeoutRef.current) {
+      clearTimeout(initTimeoutRef.current);
+      initTimeoutRef.current = null;
+    }
+
     if (!window.YT || !window.YT.Player || !containerRef.current) {
-      setTimeout(initializePlayer, 100);
+      initTimeoutRef.current = setTimeout(initializePlayer, 100);
       return;
     }
 
@@ -146,7 +159,8 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
     setIsLoading(false);
     setError(null);
     setIsEmbedDisabled(false);
-    
+    retryCountRef.current = 0; // 重置重试计数器
+
     // Set initial volume
     if (playerRef.current) {
       playerRef.current.setVolume(volume);
@@ -194,24 +208,67 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
   const handlePlayerError = (event: any) => {
     const errorCode = event.data;
     let errorMessage = t('player.unknownError', 'An unknown error occurred');
-    
+    let shouldAutoRetry = false;
+
     switch (errorCode) {
       case 2:
         errorMessage = t('player.invalidVideoId', 'Invalid video ID');
         break;
       case 5:
         errorMessage = t('player.html5Error', 'HTML5 player error');
+        // HTML5错误可能是临时的，允许重试
+        shouldAutoRetry = true;
         break;
       case 100:
         errorMessage = t('player.videoNotFound', 'Video not found or has been deleted');
         break;
       case 101:
       case 150:
-        errorMessage = t('player.embedDisabled', 'This video cannot be played here. Please watch it on YouTube.');
-        setIsEmbedDisabled(true);
+        // 错误码101/150可能是临时性的网络/加载问题
+        // 只有在多次重试后才判定为真正的嵌入禁用
+        retryCountRef.current += 1;
+
+        if (retryCountRef.current >= MAX_RETRIES) {
+          // 达到最大重试次数，判定为真正的嵌入禁用
+          errorMessage = t('player.embedDisabled', 'This video cannot be played here. Please watch it on YouTube.');
+          setIsEmbedDisabled(true);
+          setError(errorMessage);
+          setIsLoading(false);
+          message.error(errorMessage);
+        } else {
+          // 还有重试机会，显示临时错误并自动重试
+          errorMessage = t('player.loadingError', `Loading failed, retrying (${retryCountRef.current}/${MAX_RETRIES})...`);
+          console.log(`🔄 YouTube Player Error ${errorCode}, auto-retry ${retryCountRef.current}/${MAX_RETRIES}`);
+
+          // 使用指数退避策略自动重试
+          const retryDelay = 1000 * retryCountRef.current;
+          setTimeout(() => {
+            retry();
+          }, retryDelay);
+
+          // 显示提示但不算作错误
+          message.warning(errorMessage);
+          return; // 不继续执行后续的错误处理
+        }
         break;
       default:
         errorMessage = t('player.playbackError', 'Video playback error');
+        shouldAutoRetry = true;
+    }
+
+    // 对于可重试的错误（如HTML5错误），尝试自动重试
+    if (shouldAutoRetry && retryCountRef.current < MAX_RETRIES) {
+      retryCountRef.current += 1;
+      errorMessage = t('player.temporaryError', `Temporary error, retrying (${retryCountRef.current}/${MAX_RETRIES})...`);
+      console.log(`🔄 YouTube Player Error ${errorCode}, auto-retry ${retryCountRef.current}/${MAX_RETRIES}`);
+
+      const retryDelay = 1000 * retryCountRef.current;
+      setTimeout(() => {
+        retry();
+      }, retryDelay);
+
+      message.warning(errorMessage);
+      return;
     }
 
     setError(errorMessage);
@@ -365,10 +422,45 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
   };
 
   const retry = () => {
+    console.log('🔄 Retrying player initialization...');
+
+    // 1. 清理旧的player实例
+    if (playerRef.current) {
+      try {
+        playerRef.current.destroy();
+        playerRef.current = null;
+        console.log('✅ Old player instance destroyed');
+      } catch (e) {
+        console.error('❌ Error destroying player:', e);
+      }
+    }
+
+    // 2. 清理进度跟踪定时器
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+      progressIntervalRef.current = null;
+    }
+
+    // 3. 清理初始化定时器
+    if (initTimeoutRef.current) {
+      clearTimeout(initTimeoutRef.current);
+      initTimeoutRef.current = null;
+    }
+
+    // 4. 重置所有状态
     setError(null);
     setIsLoading(true);
     setIsEmbedDisabled(false);
-    initializePlayer();
+    setIsPlayerReady(false);
+    setIsPlaying(false);
+    setCurrentTime(0);
+    setDuration(0);
+
+    // 5. 重新初始化播放器
+    // 使用setTimeout确保DOM清理完成
+    setTimeout(() => {
+      initializePlayer();
+    }, 100);
   };
 
   const openInYouTube = () => {

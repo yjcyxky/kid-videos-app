@@ -9,6 +9,13 @@
     "frontendDist": "../frontend/dist",
     "devUrl": "http://localhost:1420"
   },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "macOS": {
+      "minimumSystemVersion": "10.15"
+    }
+  },
   "app": {
     "windows": [
       {

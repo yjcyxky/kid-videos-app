@@ -393,6 +393,8 @@
     "embedDisabled": "This video cannot be played here. Please watch it on YouTube.",
     "embedDisabledDesc": "This video has embedding disabled by the uploader.",
     "playbackError": "Video playback error",
+    "temporaryError": "Temporary error, retrying",
+    "loadingError": "Loading failed, retrying",
     "watchOnYouTube": "Watch on YouTube",
     "tryAgain": "Try Again",
     "retry": "Retry",

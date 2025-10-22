@@ -224,6 +224,10 @@ const Player: React.FC = () => {
                       <Text type="secondary">{formatDuration(video.duration)}</Text>
                     </>
                   )}
+                  <Text type="secondary">•</Text>
+                  <Text type="secondary">
+                    {video.id}
+                  </Text>
                 </Space>
               </div>
 
