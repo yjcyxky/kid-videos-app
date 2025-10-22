@@ -300,6 +300,11 @@ struct YouTubeVideoDetail {
 struct YouTubeVideoSnippet {
     #[serde(rename = "localized")]
     localized: Option<YouTubeLocalized>,
+    #[serde(rename = "channelTitle")]
+    channel_title: Option<String>,
+    #[serde(rename = "publishedAt")]
+    published_at: Option<String>,
+    thumbnails: Option<YouTubeThumbnails>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -569,10 +574,10 @@ async fn save_settings_to_file(app_state: &AppState, settings: &AppSettings) -> 
 fn parse_youtube_duration(duration: &str) -> Option<i32> {
     // YouTube duration format: PT4M13S, PT1H2M10S, etc.
     let duration = duration.strip_prefix("PT")?;
-    
+
     let mut total_seconds = 0;
     let mut current_number = String::new();
-    
+
     for char in duration.chars() {
         if char.is_ascii_digit() {
             current_number.push(char);
@@ -588,8 +593,172 @@ fn parse_youtube_duration(duration: &str) -> Option<i32> {
             current_number.clear();
         }
     }
-    
+
     Some(total_seconds)
+}
+
+// 检测字符串是否为 YouTube video ID
+// YouTube video ID 格式：11个字符，包含字母、数字、连字符和下划线
+fn is_youtube_video_id(query: &str) -> bool {
+    query.len() == 11 &&
+    query.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_')
+}
+
+// 从输入中提取 YouTube video ID
+// 支持：
+// - 直接的 video ID (如: dQw4w9WgXcQ)
+// - YouTube URL (如: https://www.youtube.com/watch?v=dQw4w9WgXcQ)
+// - 短链接 (如: https://youtu.be/dQw4w9WgXcQ)
+fn extract_video_id_from_input(input: &str) -> Option<String> {
+    let trimmed = input.trim();
+
+    // 检查是否为直接的 video ID
+    if is_youtube_video_id(trimmed) {
+        println!("🎯 Detected direct video ID: {}", trimmed);
+        return Some(trimmed.to_string());
+    }
+
+    // 尝试解析为 URL
+    if let Ok(parsed_url) = url::Url::parse(trimmed) {
+        let host = parsed_url.host_str().unwrap_or("");
+
+        // 处理 www.youtube.com 或 youtube.com
+        if host == "www.youtube.com" || host == "youtube.com" || host == "m.youtube.com" {
+            // 从查询参数中提取 v 参数
+            for (key, value) in parsed_url.query_pairs() {
+                if key == "v" && is_youtube_video_id(&value) {
+                    println!("🎯 Extracted video ID from URL: {}", value);
+                    return Some(value.to_string());
+                }
+            }
+        }
+        // 处理 youtu.be 短链接
+        else if host == "youtu.be" {
+            if let Some(mut segments) = parsed_url.path_segments() {
+                if let Some(id) = segments.next() {
+                    if is_youtube_video_id(id) {
+                        println!("🎯 Extracted video ID from short URL: {}", id);
+                        return Some(id.to_string());
+                    }
+                }
+            }
+        }
+    }
+
+    None
+}
+
+// 根据 video ID 直接获取视频详细信息
+// 使用 videos.list API，配额消耗仅为 1 单位（相比 search.list 的 100 单位）
+async fn get_video_by_id(
+    client: &Client,
+    api_key: &str,
+    video_id: &str,
+) -> Result<Vec<Video>> {
+    println!("🎯 Fetching video by ID: {}", video_id);
+
+    // 使用 videos.list API 获取视频详细信息
+    let details_url = format!(
+        "https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails,statistics&id={}&key={}",
+        video_id,
+        api_key
+    );
+
+    let response: YouTubeVideoDetailsResponse = client
+        .get(&details_url)
+        .timeout(tokio::time::Duration::from_secs(10))
+        .send()
+        .await
+        .map_err(|e| anyhow::anyhow!("YouTube video details request failed: {}", e))?
+        .json()
+        .await
+        .map_err(|e| anyhow::anyhow!("Failed to parse YouTube video details: {}", e))?;
+
+    if response.items.is_empty() {
+        return Err(anyhow::anyhow!("Video with ID '{}' not found or unavailable", video_id));
+    }
+
+    println!("✅ Found video by ID, fetching additional details...");
+
+    // 获取字幕信息
+    let caption = fetch_video_captions(client, api_key, video_id).await;
+
+    // 转换为 Video 对象
+    let mut videos = Vec::new();
+
+    for item in response.items {
+        let video_id_str = item.id.clone().unwrap_or_default();
+
+        // 提取 snippet 信息
+        let (title, description, channel_title, published_at, thumbnail_url) = if let Some(snippet) = &item.snippet {
+            let title = snippet.localized
+                .as_ref()
+                .map(|l| l.title.clone())
+                .unwrap_or_else(|| "Untitled Video".to_string());
+
+            let description = snippet.localized
+                .as_ref()
+                .map(|l| Some(l.description.clone()))
+                .unwrap_or(None);
+
+            let channel_title = snippet.channel_title.clone();
+
+            let published_at = snippet.published_at.clone();
+
+            // 提取缩略图 (优先 high，然后 medium)
+            let thumbnail_url = snippet.thumbnails
+                .as_ref()
+                .and_then(|t| {
+                    t.high.as_ref()
+                        .or(t.medium.as_ref())
+                        .map(|thumb| thumb.url.clone())
+                });
+
+            (title, description, channel_title, published_at, thumbnail_url)
+        } else {
+            ("Untitled Video".to_string(), None, None, None, None)
+        };
+
+        // 提取 contentDetails
+        let duration = item.content_details
+            .as_ref()
+            .and_then(|cd| parse_youtube_duration(&cd.duration));
+
+        // 提取 statistics
+        let view_count = item.statistics
+            .as_ref()
+            .and_then(|s| s.view_count.as_ref())
+            .and_then(|v| v.parse().ok());
+
+        let like_count = item.statistics
+            .as_ref()
+            .and_then(|s| s.like_count.as_ref())
+            .and_then(|l| l.parse().ok());
+
+        let video = Video {
+            id: video_id_str,
+            title,
+            description,
+            thumbnail_url,
+            duration,
+            channel_title,
+            published_at,
+            view_count,
+            like_count,
+            ai_score: None,
+            education_score: None,
+            safety_score: None,
+            age_appropriate: None,
+            tags: None,
+            cached_at: Some(chrono::Utc::now().to_rfc3339()),
+            subtitles: caption.clone(),
+        };
+
+        videos.push(video);
+    }
+
+    println!("✅ Successfully fetched video: {} (API quota: 1 unit)", video_id);
+    Ok(videos)
 }
 
 // API辅助函数 - 参考Chrome扩展的实现模式
@@ -628,7 +797,13 @@ async fn search_youtube_videos(
     max_results: i32,
 ) -> Result<Vec<Video>> {
     println!("🔍 Searching YouTube with API: query='{}', maxResults={}", query, max_results);
-    
+
+    // ✅ 检测是否为 video ID 或包含 video ID 的 URL
+    if let Some(video_id) = extract_video_id_from_input(query) {
+        println!("🎯 Query is a video ID, fetching directly (saves API quota: 1 vs 100 units)");
+        return get_video_by_id(client, api_key, &video_id).await;
+    }
+
     // 构建搜索参数 - 参考Chrome扩展的参数设置
     let search_url = format!(
         "https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q={}&maxResults={}&key={}&order=relevance&safeSearch=strict&videoCategoryId=22&videoEmbeddable=true&relevanceLanguage=en&regionCode=US",
